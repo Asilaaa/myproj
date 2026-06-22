@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"time"
 
 	"myproj/internal/ai"
 	"myproj/internal/auth"
@@ -33,14 +34,19 @@ func main() {
 	}
 
 	storageService := storage.NewService(minioClient, cfg.MinIOBucket)
-	aiService := ai.NewService(cfg.OpenAIAPIKey)
+	aiService := ai.NewService(cfg.OpenAIAPIKey, ai.GuardrailsConfig{
+		Enabled:             cfg.AIGuardrailsEnabled,
+		MaxDescriptionChars: cfg.AIMaxDescriptionChars,
+	})
 	imageRepository := images.NewRepository(db)
-	imageService := images.NewService(imageRepository, storageService, aiService, cfg.MaxUploadSizeBytes)
+	imageService := images.NewService(imageRepository, storageService, aiService, cfg.MaxUploadSizeBytes, cfg.AllowedUploadTypes)
 	imageHandler := images.NewHandler(imageService)
 
 	oryClient := auth.NewClient(cfg.OryURL)
 	authService := auth.NewService(oryClient)
 	authMiddleware := auth.NewMiddleware(authService)
+	uploadRateLimiter := httpx.NewRateLimiter(cfg.UploadRateLimitPerMinute, time.Minute)
+	importRateLimiter := httpx.NewRateLimiter(cfg.ImportRateLimitPerMinute, time.Minute)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
@@ -58,8 +64,8 @@ func main() {
 		httpx.WriteJSON(w, http.StatusOK, map[string]string{"user_id": userID})
 	})))
 	mux.Handle("GET /api/images", authMiddleware.RequireAuth(http.HandlerFunc(imageHandler.GetImages)))
-	mux.Handle("POST /api/images/upload", authMiddleware.RequireAuth(http.HandlerFunc(imageHandler.UploadImage)))
-	mux.Handle("POST /api/images/import", authMiddleware.RequireAuth(http.HandlerFunc(imageHandler.ImportImage)))
+	mux.Handle("POST /api/images/upload", authMiddleware.RequireAuth(uploadRateLimiter.Middleware("upload")(http.HandlerFunc(imageHandler.UploadImage))))
+	mux.Handle("POST /api/images/import", authMiddleware.RequireAuth(importRateLimiter.Middleware("import")(http.HandlerFunc(imageHandler.ImportImage))))
 	mux.Handle("GET /api/images/{id}", authMiddleware.RequireAuth(http.HandlerFunc(imageHandler.GetImage)))
 	mux.Handle("DELETE /api/images/{id}", authMiddleware.RequireAuth(http.HandlerFunc(imageHandler.DeleteImage)))
 	mux.Handle("GET /api/objects", authMiddleware.RequireAuth(http.HandlerFunc(imageHandler.ListBucketObjects)))

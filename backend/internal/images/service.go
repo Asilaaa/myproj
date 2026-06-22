@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"path"
 	"path/filepath"
 	"strings"
@@ -16,10 +17,11 @@ import (
 )
 
 type Service struct {
-	repository        *Repository
-	storage           *storage.Service
-	ai                *ai.Service
-	maxUploadSizeByte int64
+	repository          *Repository
+	storage             *storage.Service
+	ai                  *ai.Service
+	maxUploadSizeByte   int64
+	allowedContentTypes map[string]struct{}
 }
 
 type UploadInput struct {
@@ -40,12 +42,23 @@ func NewService(
 	storageService *storage.Service,
 	aiService *ai.Service,
 	maxUploadSizeBytes int64,
+	allowedContentTypes []string,
 ) *Service {
+	allowed := make(map[string]struct{}, len(allowedContentTypes))
+	for _, contentType := range allowedContentTypes {
+		normalized := strings.TrimSpace(strings.ToLower(contentType))
+		if normalized == "" {
+			continue
+		}
+		allowed[normalized] = struct{}{}
+	}
+
 	return &Service{
-		repository:        repository,
-		storage:           storageService,
-		ai:                aiService,
-		maxUploadSizeByte: maxUploadSizeBytes,
+		repository:          repository,
+		storage:             storageService,
+		ai:                  aiService,
+		maxUploadSizeByte:   maxUploadSizeBytes,
+		allowedContentTypes: allowed,
 	}
 }
 
@@ -57,11 +70,6 @@ func (s *Service) UploadAndDescribe(ctx context.Context, input UploadInput) (*Im
 		return nil, fmt.Errorf("file reader is required")
 	}
 
-	contentType := strings.TrimSpace(input.ContentType)
-	if !strings.HasPrefix(contentType, "image/") {
-		return nil, fmt.Errorf("uploaded file must be an image")
-	}
-
 	limitedReader := io.LimitReader(input.Reader, s.maxUploadSizeByte+1)
 	data, err := io.ReadAll(limitedReader)
 	if err != nil {
@@ -69,6 +77,11 @@ func (s *Service) UploadAndDescribe(ctx context.Context, input UploadInput) (*Im
 	}
 	if int64(len(data)) > s.maxUploadSizeByte {
 		return nil, fmt.Errorf("file exceeds max upload size of %d bytes", s.maxUploadSizeByte)
+	}
+
+	contentType, err := s.detectAndValidateContentType(input.ContentType, data)
+	if err != nil {
+		return nil, err
 	}
 
 	objectName := generateObjectName(input.Filename)
@@ -117,11 +130,13 @@ func (s *Service) ImportFromBucket(ctx context.Context, input ImportInput) (*Ima
 	if err != nil {
 		return nil, err
 	}
-	if !strings.HasPrefix(objectInfo.ContentType, "image/") {
-		return nil, fmt.Errorf("selected object is not an image")
-	}
 
 	data, contentType, err := s.storage.ReadUserObject(ctx, input.UserID, input.ObjectName)
+	if err != nil {
+		return nil, err
+	}
+
+	contentType, err = s.detectAndValidateContentType(objectInfo.ContentType, data)
 	if err != nil {
 		return nil, err
 	}
@@ -184,14 +199,42 @@ func (s *Service) ListBucketObjects(ctx context.Context, userID string) ([]stora
 		return nil, err
 	}
 
+	if len(s.allowedContentTypes) == 0 {
+		return objects, nil
+	}
+
 	filtered := make([]storage.ObjectInfo, 0, len(objects))
 	for _, object := range objects {
-		if strings.HasPrefix(object.ContentType, "image/") {
+		if _, ok := s.allowedContentTypes[strings.ToLower(strings.TrimSpace(object.ContentType))]; ok {
 			filtered = append(filtered, object)
 		}
 	}
 
 	return filtered, nil
+}
+
+func (s *Service) detectAndValidateContentType(inputContentType string, data []byte) (string, error) {
+	if len(data) == 0 {
+		return "", fmt.Errorf("image data is empty")
+	}
+
+	detected := strings.ToLower(strings.TrimSpace(http.DetectContentType(data)))
+	if detected == "application/octet-stream" {
+		detected = strings.ToLower(strings.TrimSpace(inputContentType))
+	}
+	if detected == "" {
+		return "", fmt.Errorf("could not determine image content type")
+	}
+	if !strings.HasPrefix(detected, "image/") {
+		return "", fmt.Errorf("uploaded file must be an image")
+	}
+	if len(s.allowedContentTypes) > 0 {
+		if _, ok := s.allowedContentTypes[detected]; !ok {
+			return "", fmt.Errorf("unsupported image type %q", detected)
+		}
+	}
+
+	return detected, nil
 }
 
 func generateObjectName(filename string) string {

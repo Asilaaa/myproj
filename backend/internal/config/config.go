@@ -25,7 +25,12 @@ type Config struct {
 
 	OryURL string
 
-	MaxUploadSizeBytes int64
+	MaxUploadSizeBytes       int64
+	AllowedUploadTypes       []string
+	AIGuardrailsEnabled      bool
+	AIMaxDescriptionChars    int
+	UploadRateLimitPerMinute int
+	ImportRateLimitPerMinute int
 }
 
 func Load() (*Config, error) {
@@ -34,7 +39,27 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+	aiGuardrailsEnabled, err := getBoolEnv("AI_GUARDRAILS_ENABLED", true)
+	if err != nil {
+		return nil, err
+	}
+
 	maxUploadSizeBytes, err := getInt64Env("MAX_UPLOAD_SIZE_BYTES", 10<<20)
+	if err != nil {
+		return nil, err
+	}
+
+	aiMaxDescriptionChars, err := getIntEnv("AI_MAX_DESCRIPTION_CHARS", 500)
+	if err != nil {
+		return nil, err
+	}
+
+	uploadRateLimitPerMinute, err := getIntEnv("UPLOAD_RATE_LIMIT_PER_MINUTE", 10)
+	if err != nil {
+		return nil, err
+	}
+
+	importRateLimitPerMinute, err := getIntEnv("IMPORT_RATE_LIMIT_PER_MINUTE", 20)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +81,12 @@ func Load() (*Config, error) {
 
 		OryURL: getEnv("ORY_URL", ""),
 
-		MaxUploadSizeBytes: maxUploadSizeBytes,
+		MaxUploadSizeBytes:       maxUploadSizeBytes,
+		AllowedUploadTypes:       getListEnv("ALLOWED_UPLOAD_TYPES", []string{"image/jpeg", "image/png", "image/webp"}),
+		AIGuardrailsEnabled:      aiGuardrailsEnabled,
+		AIMaxDescriptionChars:    aiMaxDescriptionChars,
+		UploadRateLimitPerMinute: uploadRateLimitPerMinute,
+		ImportRateLimitPerMinute: importRateLimitPerMinute,
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -85,6 +115,19 @@ func (c *Config) Validate() error {
 		}
 	}
 
+	if len(c.AllowedUploadTypes) == 0 {
+		return fmt.Errorf("ALLOWED_UPLOAD_TYPES must contain at least one content type")
+	}
+	if c.AIMaxDescriptionChars <= 0 {
+		return fmt.Errorf("AI_MAX_DESCRIPTION_CHARS must be greater than zero")
+	}
+	if c.UploadRateLimitPerMinute <= 0 {
+		return fmt.Errorf("UPLOAD_RATE_LIMIT_PER_MINUTE must be greater than zero")
+	}
+	if c.ImportRateLimitPerMinute <= 0 {
+		return fmt.Errorf("IMPORT_RATE_LIMIT_PER_MINUTE must be greater than zero")
+	}
+
 	return nil
 }
 
@@ -110,6 +153,23 @@ func getBoolEnv(key string, defaultValue bool) (bool, error) {
 	return parsed, nil
 }
 
+func getIntEnv(key string, defaultValue int) (int, error) {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return defaultValue, nil
+	}
+
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, fmt.Errorf("%s must be a valid integer: %w", key, err)
+	}
+	if parsed <= 0 {
+		return 0, fmt.Errorf("%s must be greater than zero", key)
+	}
+
+	return parsed, nil
+}
+
 func getInt64Env(key string, defaultValue int64) (int64, error) {
 	value := strings.TrimSpace(os.Getenv(key))
 	if value == "" {
@@ -126,4 +186,25 @@ func getInt64Env(key string, defaultValue int64) (int64, error) {
 	}
 
 	return parsed, nil
+}
+
+func getListEnv(key string, defaultValue []string) []string {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return append([]string(nil), defaultValue...)
+	}
+
+	parts := strings.Split(value, ",")
+	result := make([]string, 0, len(parts))
+	for _, part := range parts {
+		normalized := strings.ToLower(strings.TrimSpace(part))
+		if normalized == "" {
+			continue
+		}
+		result = append(result, normalized)
+	}
+	if len(result) == 0 {
+		return append([]string(nil), defaultValue...)
+	}
+	return result
 }

@@ -1,4 +1,3 @@
-
 package ai
 
 import (
@@ -15,20 +14,20 @@ import (
 )
 
 type Service struct {
-	apiKey string
+	apiKey     string
+	guardrails GuardrailsConfig
 }
 
-//Created everytime application runs
-func NewService(apiKey string) *Service {
-	return &Service{apiKey: apiKey}
+// Created everytime application runs
+func NewService(apiKey string, guardrails GuardrailsConfig) *Service {
+	return &Service{apiKey: apiKey, guardrails: guardrails}
 }
 
-//private client creating from OpenAI
+// private client creating from OpenAI
 func (s *Service) client() openai.Client {
 	return openai.NewClient(option.WithAPIKey(s.apiKey))
 }
 
-//
 func (s *Service) DescribeImage(ctx context.Context, contentType string, imageData []byte) (string, error) {
 	//validation
 	if strings.TrimSpace(s.apiKey) == "" {
@@ -70,10 +69,10 @@ func (s *Service) DescribeImage(ctx context.Context, contentType string, imageDa
 		return "", err
 	}
 
-	return strings.TrimSpace(resp.OutputText()), nil
+	return applyDescriptionGuardrails(resp.OutputText(), s.guardrails), nil
 }
 
-//this is not for this project, it is just a test
+// this is not for this project, it is just a test
 func (s *Service) RunVisionCheck(ctx context.Context) (string, error) {
 	imageInput := responses.ResponseInputContentParamOfInputImage(responses.ResponseInputImageDetailAuto)
 	imageInput.OfInputImage.ImageURL = openai.String("https://openai-documentation.vercel.app/images/cat_and_otter.png")
@@ -101,7 +100,7 @@ func (s *Service) RunVisionCheck(ctx context.Context) (string, error) {
 }
 
 func RunVisionCheck() error {
-	service := NewService(os.Getenv("OPENAI_API_KEY"))
+	service := NewService(os.Getenv("OPENAI_API_KEY"), GuardrailsConfig{Enabled: true, MaxDescriptionChars: 500})
 	output, err := service.RunVisionCheck(context.Background())
 	if err != nil {
 		return err
