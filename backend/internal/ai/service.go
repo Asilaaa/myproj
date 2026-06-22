@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -50,6 +51,37 @@ func (s *Service) DescribeImage(ctx context.Context, contentType string, imageDa
 	//3. attaching the actual image
 	imageInput.OfInputImage.ImageURL = openai.String(dataURL)
 
+	schema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"main_subject": map[string]any{
+				"type": "string",
+			},
+			"objects": map[string]any{
+				"type": "array",
+				"items": map[string]any{
+					"type": "string",
+				},
+			},
+			"scene": map[string]any{
+				"type": "string",
+			},
+			"notable_details": map[string]any{
+				"type": "array",
+				"items": map[string]any{
+					"type": "string",
+				},
+			},
+		},
+		"required": []string{
+			"main_subject",
+			"objects",
+			"scene",
+			"notable_details",
+		},
+		"additionalProperties": false,
+	}
+
 	client := s.client()
 	resp, err := client.Responses.New(ctx, responses.ResponseNewParams{
 		Model: shared.ResponsesModel("gpt-4.1-mini"),
@@ -64,12 +96,32 @@ func (s *Service) DescribeImage(ctx context.Context, contentType string, imageDa
 				),
 			},
 		},
+		Text: responses.ResponseTextConfigParam{
+			Format: responses.ResponseFormatTextConfigParamOfJSONSchema("image_description", schema),
+		},
 	})
 	if err != nil {
 		return "", err
 	}
 
-	return applyDescriptionGuardrails(resp.OutputText(), s.guardrails), nil
+	var structured ImageDescription
+	if err := json.Unmarshal([]byte(resp.OutputText()), &structured); err != nil {
+		return "", fmt.Errorf("could not parse structured image description: %w", err)
+	}
+
+	if strings.TrimSpace(structured.MainSubject) == "" && strings.TrimSpace(structured.Scene) == "" {
+		return "", fmt.Errorf("structured image description is missing required content")
+	}
+
+	description := fmt.Sprintf(
+		"Main subject: %s. Objects: %s. Scene: %s. Notable details: %s.",
+		strings.TrimSpace(structured.MainSubject),
+		strings.Join(structured.Objects, ", "),
+		strings.TrimSpace(structured.Scene),
+		strings.Join(structured.NotableDetails, ", "),
+	)
+
+	return applyDescriptionGuardrails(description, s.guardrails), nil
 }
 
 // this is not for this project, it is just a test
