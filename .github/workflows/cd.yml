@@ -80,6 +80,7 @@ jobs:
           set -Eeuo pipefail
 
           sudo mkdir -p "$APP_DIR"
+          sudo rm -rf "$APP_DIR/go" "$APP_DIR/.gopath"
           sudo rsync -a --delete \
             --exclude '.env.production' \
             --exclude '.env.local' \

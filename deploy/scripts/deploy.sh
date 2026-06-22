@@ -11,6 +11,7 @@ API_SERVICE="${API_SERVICE:-myproj-api}"
 FRONTEND_SERVICE="${FRONTEND_SERVICE:-myproj-frontend}"
 GO_CACHE="${GO_CACHE:-$APP_DIR/.cache/go-build}"
 BACKEND_HEALTHCHECK_URL="${BACKEND_HEALTHCHECK_URL:-http://127.0.0.1:8080/health}"
+APP_PATH="${APP_PATH:-/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin}"
 
 log() {
   printf '\n[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"
@@ -21,11 +22,12 @@ have_service() {
 }
 
 run_as_app() {
-  sudo -u "$APP_USER" env HOME="$APP_DIR" "$@"
+  sudo -u "$APP_USER" env HOME="$APP_DIR" PATH="$APP_PATH" "$@"
 }
 
 log "Preparing directories"
 sudo mkdir -p "$APP_DIR/bin" "$GO_CACHE"
+sudo find "$APP_DIR" -maxdepth 1 \( -name 'go' -o -name '.gopath' \) -exec rm -rf {} + 2>/dev/null || true
 sudo chown -R "$APP_USER:$APP_GROUP" "$APP_DIR"
 
 log "Building backend"
