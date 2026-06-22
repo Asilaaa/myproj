@@ -1,0 +1,13 @@
+www.sukoon.uz {
+    redir https://sukoon.uz{uri}
+}
+
+sukoon.uz {
+    handle_path /ory/* {
+        reverse_proxy 127.0.0.1:4433
+    }
+
+    handle {
+        reverse_proxy 127.0.0.1:3000
+    }
+}

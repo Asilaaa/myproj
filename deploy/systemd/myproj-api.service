@@ -1,0 +1,23 @@
+[Unit]
+Description=MyProj API service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=myproj
+Group=myproj
+WorkingDirectory=/opt/myproj/backend
+EnvironmentFile=/etc/myproj/api.env
+ExecStart=/opt/myproj/bin/myproj-api
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,18 @@
+[Unit]
+Description=Ory Kratos
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kratos
+Group=kratos
+WorkingDirectory=/var/lib/kratos
+ExecStart=/usr/local/bin/kratos serve -c /etc/kratos/kratos.yml
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

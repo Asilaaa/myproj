@@ -1,0 +1,16 @@
+# Go
+backend/api
+build/
+
+# Next.js
+frontend/.next/
+frontend/node_modules/
+
+# Local envs
+.env
+.env.*
+frontend/.env*
+.local-run/
+
+# OS/editor
+.DS_Store

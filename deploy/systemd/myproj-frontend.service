@@ -1,0 +1,19 @@
+[Unit]
+Description=MyProj Next.js frontend
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=myproj
+Group=myproj
+WorkingDirectory=/opt/myproj/frontend
+EnvironmentFile=/etc/myproj/frontend.env
+ExecStart=/usr/bin/env PATH=/usr/local/bin:/usr/bin:/bin npm run start -- --hostname 127.0.0.1 --port 3000
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
