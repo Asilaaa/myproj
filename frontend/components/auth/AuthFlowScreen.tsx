@@ -40,7 +40,7 @@ export function AuthFlowScreen({ mode }: { mode: 'login' | 'registration' }) {
   return (
     <main className="auth-shell">
       <div className="orb orb--pink" />
-      <div className="orb orb--blue" />
+      <div className="orb orb--violet" />
       <div className="orb orb--gold" />
 
       <div className="auth-shell__content">
