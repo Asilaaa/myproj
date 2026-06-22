@@ -54,7 +54,7 @@ jobs:
           SERVER_USER: ${{ secrets.SERVER_USER }}
           REMOTE_TMP_DIR: ${{ secrets.REMOTE_TMP_DIR }}
         run: |
-          rsync -az --delete \
+          rsync -rltz --delete \
             --exclude '.git' \
             --exclude '.github' \
             --exclude 'frontend/node_modules' \
