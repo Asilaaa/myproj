@@ -21,12 +21,20 @@ const pastelMessages = [
   'Upload, explore, describe — let’s make your bucket joyful.',
 ];
 
+type ParsedImageDescription = {
+  mainSubject: string;
+  objects: string;
+  scene: string;
+  notableDetails: string;
+};
+
 export function Dashboard() {
   const [session, setSession] = useState<OrySession | null>(null);
   const [backendUserID, setBackendUserID] = useState<string | null>(null);
   const [images, setImages] = useState<ImageRecord[]>([]);
   const [objects, setObjects] = useState<BucketObject[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedImage, setSelectedImage] = useState<ImageRecord | null>(null);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -295,33 +303,120 @@ export function Dashboard() {
                   <p>Upload something colorful or import an existing bucket object to get started.</p>
                 </div>
               ) : (
-                filteredImages.map((image) => (
-                  <article className="image-card" key={image.id}>
-                    <div className="image-card__top">
-                      <span className="badge">{image.content_type}</span>
-                      <button
-                        className="icon-button"
-                        onClick={() => void handleDelete(image.id)}
-                        disabled={busy === `delete:${image.id}`}
-                        aria-label={`Delete ${image.original_filename}`}
-                      >
-                        {busy === `delete:${image.id}` ? '…' : '✕'}
-                      </button>
-                    </div>
-                    <h3 className="truncate-2" title={image.original_filename}>{image.original_filename}</h3>
-                    <p className="image-card__meta truncate-2" title={image.object_name}>{image.object_name}</p>
-                    <p className="image-card__description" title={image.description}>{image.description}</p>
-                    <div className="image-card__footer">
-                      <span>{Math.round(image.size_bytes / 1024)} KB</span>
-                      <span>{new Date(image.created_at).toLocaleString()}</span>
-                    </div>
-                  </article>
-                ))
+                filteredImages.map((image) => {
+                  const parsedDescription = parseImageDescription(image.description);
+
+                  return (
+                    <article
+                      className="image-card image-card--interactive"
+                      key={image.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSelectedImage(image)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          setSelectedImage(image);
+                        }
+                      }}
+                    >
+                      <div className="image-card__top">
+                        <span className="badge">{image.content_type}</span>
+                        <button
+                          className="icon-button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void handleDelete(image.id);
+                          }}
+                          disabled={busy === `delete:${image.id}`}
+                          aria-label={`Delete ${image.original_filename}`}
+                        >
+                          {busy === `delete:${image.id}` ? '…' : '✕'}
+                        </button>
+                      </div>
+                      <h3 className="truncate-2" title={image.original_filename}>{image.original_filename}</h3>
+                      <p className="image-card__meta truncate-2" title={image.object_name}>{image.object_name}</p>
+                      <div className="image-card__description-group">
+                        <p className="image-card__description-line"><strong>Main subject:</strong> {parsedDescription.mainSubject}</p>
+                        <p className="image-card__description-line"><strong>Objects:</strong> {parsedDescription.objects}</p>
+                        <p className="image-card__description-line"><strong>Scene:</strong> {parsedDescription.scene}</p>
+                        <p className="image-card__description-line"><strong>Notable details:</strong> {parsedDescription.notableDetails}</p>
+                      </div>
+                      <div className="image-card__footer">
+                        <span>{Math.round(image.size_bytes / 1024)} KB</span>
+                        <span>{new Date(image.created_at).toLocaleString()}</span>
+                      </div>
+                    </article>
+                  );
+                })
               )}
             </div>
           </section>
+
+          {selectedImage && (
+            <div className="modal-backdrop" onClick={() => setSelectedImage(null)}>
+              <div
+                className="modal-card glass-card"
+                onClick={(event) => event.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="image-detail-title"
+              >
+                <div className="modal-card__top">
+                  <div>
+                    <span className="badge">{selectedImage.content_type}</span>
+                    <h3 id="image-detail-title">{selectedImage.original_filename}</h3>
+                    <p className="image-card__meta">{selectedImage.object_name}</p>
+                  </div>
+                  <button className="icon-button" onClick={() => setSelectedImage(null)} aria-label="Close image details">
+                    ✕
+                  </button>
+                </div>
+
+                {(() => {
+                  const parsedDescription = parseImageDescription(selectedImage.description);
+
+                  return (
+                    <div className="modal-card__description-group">
+                      <p><strong>Main subject:</strong> {parsedDescription.mainSubject}</p>
+                      <p><strong>Objects:</strong> {parsedDescription.objects}</p>
+                      <p><strong>Scene:</strong> {parsedDescription.scene}</p>
+                      <p><strong>Notable details:</strong> {parsedDescription.notableDetails}</p>
+                    </div>
+                  );
+                })()}
+
+                <div className="image-card__footer">
+                  <span>{Math.round(selectedImage.size_bytes / 1024)} KB</span>
+                  <span>{new Date(selectedImage.created_at).toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </main>
   );
+}
+
+function parseImageDescription(description: string): ParsedImageDescription {
+  const normalized = description.trim();
+  const pattern = /^Main subject:\s*([\s\S]*?)\.\s*Objects:\s*([\s\S]*?)\.\s*Scene:\s*([\s\S]*?)\.\s*Notable details:\s*([\s\S]*?)\.?$/i;
+  const match = normalized.match(pattern);
+
+  if (!match) {
+    return {
+      mainSubject: normalized || '—',
+      objects: '—',
+      scene: '—',
+      notableDetails: '—',
+    };
+  }
+
+  return {
+    mainSubject: match[1].trim() || '—',
+    objects: match[2].trim() || '—',
+    scene: match[3].trim() || '—',
+    notableDetails: match[4].trim() || '—',
+  };
 }
