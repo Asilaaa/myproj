@@ -1,16 +1,20 @@
 :root {
-  --bg: #090b1a;
-  --bg-soft: rgba(17, 24, 39, 0.7);
+  --bg: #120110;
+  --bg-soft: rgba(38, 10, 34, 0.78);
   --card: rgba(255, 255, 255, 0.12);
   --card-strong: rgba(255, 255, 255, 0.18);
   --line: rgba(255, 255, 255, 0.14);
-  --text: #f7f7fb;
-  --muted: #d8d8f6;
+  --line-strong: rgba(255, 122, 181, 0.34);
+  --text: #fff3fb;
+  --muted: #f6c9e5;
+  --red: #ff4d6d;
   --pink: #ff5ea8;
-  --blue: #65d6ff;
+  --violet: #b06cff;
+  --violet-deep: #6f2cff;
   --gold: #ffd166;
-  --green: #88f7b3;
-  --shadow: 0 30px 80px rgba(0, 0, 0, 0.28);
+  --shadow: 0 30px 80px rgba(18, 0, 18, 0.42);
+  --glow-pink: 0 0 0 1px rgba(255, 94, 168, 0.2), 0 0 32px rgba(255, 94, 168, 0.18);
+  --glow-violet: 0 0 0 1px rgba(176, 108, 255, 0.2), 0 0 36px rgba(176, 108, 255, 0.2);
 }
 
 * {
@@ -27,10 +31,10 @@ body {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at top left, rgba(255, 94, 168, 0.22), transparent 22%),
-    radial-gradient(circle at top right, rgba(101, 214, 255, 0.18), transparent 24%),
-    radial-gradient(circle at bottom center, rgba(255, 209, 102, 0.16), transparent 24%),
-    linear-gradient(160deg, #050814 0%, #11183a 55%, #1e224b 100%);
+    radial-gradient(circle at top left, rgba(255, 77, 109, 0.24), transparent 22%),
+    radial-gradient(circle at top right, rgba(176, 108, 255, 0.22), transparent 24%),
+    radial-gradient(circle at bottom center, rgba(255, 94, 168, 0.2), transparent 24%),
+    linear-gradient(160deg, #170112 0%, #290726 48%, #3b0d42 100%);
 }
 
 a {
@@ -88,15 +92,18 @@ input {
 .orb--pink {
   width: 260px;
   height: 260px;
-  background: rgba(255, 94, 168, 0.25);
+  background: rgba(255, 94, 168, 0.28);
+  box-shadow: 0 0 80px rgba(255, 94, 168, 0.28);
   top: 6%;
   left: 5%;
 }
 
+.orb--violet,
 .orb--blue {
   width: 300px;
   height: 300px;
-  background: rgba(101, 214, 255, 0.2);
+  background: rgba(176, 108, 255, 0.24);
+  box-shadow: 0 0 100px rgba(176, 108, 255, 0.3);
   right: 8%;
   top: 18%;
   animation-delay: -4s;
@@ -105,7 +112,8 @@ input {
 .orb--gold {
   width: 220px;
   height: 220px;
-  background: rgba(255, 209, 102, 0.18);
+  background: rgba(255, 77, 109, 0.18);
+  box-shadow: 0 0 70px rgba(255, 77, 109, 0.25);
   left: 24%;
   bottom: 6%;
   animation-delay: -8s;
@@ -120,10 +128,33 @@ input {
 .glass-card {
   position: relative;
   z-index: 2;
-  background: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.1));
-  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--line-strong);
   backdrop-filter: blur(22px);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow), var(--glow-violet);
+}
+
+.glass-card::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
+.glass-card::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255, 77, 109, 0.5), rgba(255, 94, 168, 0.42), rgba(176, 108, 255, 0.38));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.8;
+  pointer-events: none;
 }
 
 .hero-panel,
@@ -158,6 +189,7 @@ input {
 .section-heading h1 {
   margin: 10px 0 10px;
   line-height: 1;
+  text-shadow: 0 0 24px rgba(255, 94, 168, 0.2);
 }
 
 .hero-panel h1,
@@ -199,8 +231,9 @@ input {
   width: fit-content;
   padding: 8px 14px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.14);
-  border: 1px solid rgba(255,255,255,0.2);
+  background: linear-gradient(135deg, rgba(255, 77, 109, 0.2), rgba(176, 108, 255, 0.16));
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: var(--glow-pink);
   color: #fff;
   font-size: 0.85rem;
   font-weight: 700;
@@ -230,21 +263,22 @@ input {
 }
 
 .candy-button {
-  color: #08121f;
-  background: linear-gradient(135deg, var(--gold), #ffe7a0 40%, var(--green));
-  box-shadow: 0 16px 30px rgba(255, 209, 102, 0.22);
+  color: #fff7fb;
+  background: linear-gradient(135deg, var(--red), var(--pink) 45%, var(--violet));
+  box-shadow: 0 16px 30px rgba(255, 94, 168, 0.26), 0 0 28px rgba(176, 108, 255, 0.22);
 }
 
 .candy-button--secondary {
-  background: linear-gradient(135deg, #ff93c4, #ffc0db 55%, #ffd166);
+  background: linear-gradient(135deg, #ff84a8, #ff5ea8 50%, #c07dff);
 }
 
 .ghost-button,
 .ghost-link,
 .icon-button {
   color: #fff;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.16);
+  background: linear-gradient(135deg, rgba(255, 77, 109, 0.12), rgba(176, 108, 255, 0.1));
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 0 0 1px rgba(255, 94, 168, 0.08), 0 12px 24px rgba(28, 3, 26, 0.2);
 }
 
 .ghost-button:hover,
@@ -252,6 +286,7 @@ input {
 .candy-button:hover,
 .icon-button:hover {
   transform: translateY(-2px);
+  box-shadow: 0 0 0 1px rgba(255, 151, 201, 0.25), 0 18px 34px rgba(255, 94, 168, 0.18);
 }
 
 .ghost-link {
@@ -326,8 +361,9 @@ button:disabled {
   min-height: 160px;
   padding: 20px;
   border-radius: 24px;
-  border: 2px dashed rgba(255,255,255,0.22);
-  background: linear-gradient(135deg, rgba(101,214,255,0.08), rgba(255,94,168,0.12));
+  border: 2px dashed rgba(255, 180, 220, 0.34);
+  background: linear-gradient(135deg, rgba(255, 77, 109, 0.12), rgba(255, 94, 168, 0.12), rgba(176, 108, 255, 0.12));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 0 30px rgba(255, 94, 168, 0.08);
   text-align: center;
   margin-bottom: 18px;
   overflow: hidden;
@@ -387,8 +423,9 @@ button:disabled {
   gap: 16px;
   padding: 16px;
   border-radius: 18px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: linear-gradient(135deg, rgba(255, 77, 109, 0.08), rgba(176, 108, 255, 0.08));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   overflow: hidden;
 }
 
@@ -421,11 +458,12 @@ button:disabled {
   width: 100%;
   min-height: 52px;
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(7, 14, 31, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(36, 7, 34, 0.5);
   color: #fff;
   padding: 0 16px;
   outline: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 94, 168, 0.08);
 }
 
 .search-input {
@@ -442,8 +480,9 @@ button:disabled {
 .empty-card {
   padding: 20px;
   border-radius: 24px;
-  background: rgba(255,255,255,0.09);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.07));
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  box-shadow: 0 20px 34px rgba(21, 2, 20, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .image-card {
@@ -493,18 +532,21 @@ button:disabled {
 }
 
 .toast--error {
-  background: rgba(255, 82, 119, 0.16);
-  border-color: rgba(255, 82, 119, 0.28);
+  background: rgba(255, 77, 109, 0.18);
+  border-color: rgba(255, 77, 109, 0.34);
+  box-shadow: 0 0 28px rgba(255, 77, 109, 0.12);
 }
 
 .toast--success {
-  background: rgba(86, 255, 153, 0.14);
-  border-color: rgba(86, 255, 153, 0.24);
+  background: rgba(198, 105, 255, 0.14);
+  border-color: rgba(198, 105, 255, 0.26);
+  box-shadow: 0 0 28px rgba(198, 105, 255, 0.1);
 }
 
 .toast--warning {
-  background: rgba(255, 209, 102, 0.14);
-  border-color: rgba(255, 209, 102, 0.24);
+  background: rgba(255, 94, 168, 0.14);
+  border-color: rgba(255, 94, 168, 0.24);
+  box-shadow: 0 0 28px rgba(255, 94, 168, 0.1);
 }
 
 .auth-card {
@@ -587,6 +629,7 @@ button:disabled {
   display: grid;
   place-items: center;
   color: rgba(255,255,255,0.86);
+  box-shadow: var(--glow-pink);
   overflow: hidden;
 }
 
@@ -610,7 +653,7 @@ button:disabled {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(255,94,168,0.8), rgba(101,214,255,0.8));
+  background: linear-gradient(180deg, rgba(255, 77, 109, 0.85), rgba(255, 94, 168, 0.82), rgba(176, 108, 255, 0.82));
   border-radius: 999px;
   border: 3px solid transparent;
   background-clip: padding-box;

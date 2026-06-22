@@ -140,7 +140,7 @@ export function Dashboard() {
   return (
     <main className="app-shell">
       <div className="orb orb--pink" />
-      <div className="orb orb--blue" />
+      <div className="orb orb--violet" />
       <div className="orb orb--gold" />
 
       <section className="hero-panel glass-card">
